@@ -4,15 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * El árbol genealógico: un SUJETO (posición "1") con sus ASCENDIENTES (padres, abuelos... en Ahnentafel)
+ * El árbol genealógico: un SUJETO (posición "1") con sus ASCENDIENTES (padres,
+ * abuelos... en Ahnentafel)
  * y sus DESCENDIENTES (hijos, nietos... en d'Aboville). Ver la clase Posicion.
  *
  * Son en realidad dos árboles unidos en la raíz:
  *
- *    ascendientes:  árbol BINARIO. Cada persona tiene como mucho un padre (2n) y una madre (2n + 1).
- *    descendientes: árbol GENERAL. Cada persona tiene una lista de hijos (1.1, 1.2, ...) ordenada por número.
+ * ascendientes: árbol BINARIO. Cada persona tiene como mucho un padre (2n) y
+ * una madre (2n + 1).
+ * descendientes: árbol GENERAL. Cada persona tiene una lista de hijos (1.1,
+ * 1.2, ...) ordenada por número.
  *
- * El árbol solo guarda a los miembros que EXISTEN: no hay "huecos" ni personas vacías. Puede faltar el padre
+ * El árbol solo guarda a los miembros que EXISTEN: no hay "huecos" ni personas
+ * vacías. Puede faltar el padre
  * de alguien, o el hijo 1.1 aunque exista el 1.2.
  */
 
@@ -40,7 +44,7 @@ public class ArbolGenealogico {
      * Crea un árbol que solo tiene al sujeto.
      *
      * @throws IllegalArgumentException si la persona no es válida (Persona.validar)
-     * @throws ArbolInvalidoException si su posición no es "1"
+     * @throws ArbolInvalidoException   si su posición no es "1"
      */
     public ArbolGenealogico(Persona sujeto) {
         if (sujeto == null) {
@@ -62,13 +66,17 @@ public class ArbolGenealogico {
         return raiz != null ? raiz.persona : null;
     }
 
-    /** @return cuántos miembros tiene el árbol (el sujeto cuenta; un árbol nuevo tiene 1) */
+    /**
+     * @return cuántos miembros tiene el árbol (el sujeto cuenta; un árbol nuevo
+     *         tiene 1)
+     */
     public int tamano() {
         return this.cantidadMiembros;
     }
 
     /**
-     * @return la persona de esa posición, o null si no existe en el árbol o si la posición no es válida
+     * @return la persona de esa posición, o null si no existe en el árbol o si la
+     *         posición no es válida
      */
     public Persona buscar(String posicion) {
         Nodo nodo = buscarNodo(posicion);
@@ -76,7 +84,8 @@ public class ArbolGenealogico {
     }
 
     /**
-     * Método auxiliar para buscar un nodo dado su string de posición (Ahnentafel o D'Aboville).
+     * Método auxiliar para buscar un nodo dado su string de posición (Ahnentafel o
+     * D'Aboville).
      */
     private Nodo buscarNodo(String posicion) {
         if (posicion == null || !Posicion.esValida(posicion)) {
@@ -89,8 +98,9 @@ public class ArbolGenealogico {
         // Si es puramente numérico, es un número Ahnentafel (Ascendientes)
         if (esNumeroEntero(posicion)) {
             long n = Long.parseLong(posicion);
-            if (n <= 1) return null;
-            
+            if (n <= 1)
+                return null;
+
             // Reconstruir camino binario desde la raíz (1) hasta n
             // Los bits después del primer 1: 0 = padre, 1 = madre
             String binario = Long.toBinaryString(n);
@@ -102,13 +112,15 @@ public class ArbolGenealogico {
                 } else {
                     actual = actual.madreNodo;
                 }
-                if (actual == null) return null;
+                if (actual == null)
+                    return null;
             }
             return actual;
         } else {
             // Es un número D'Aboville (Descendientes), formato ej: 1.2.3
             String[] partes = posicion.split("\\.");
-            if (partes.length == 0 || !partes[0].equals("1")) return null;
+            if (partes.length == 0 || !partes[0].equals("1"))
+                return null;
 
             Nodo actual = raiz;
             for (int i = 1; i < partes.length; i++) {
@@ -118,28 +130,34 @@ public class ArbolGenealogico {
                 } catch (NumberFormatException e) {
                     return null;
                 }
-                
+
                 // Buscar el hijo cuyo número o índice coincida
                 // Nota: D'Aboville empieza típicamente en 1 (hijo 1, 2...)
                 if (indiceHijo <= 0 || indiceHijo > actual.hijos.size()) {
                     return null;
                 }
                 actual = actual.hijos.get(indiceHijo - 1);
-                if (actual == null) return null;
+                if (actual == null)
+                    return null;
             }
             return actual;
         }
     }
 
     private boolean esNumeroEntero(String str) {
-        if (str == null || str.isEmpty()) return false;
+        if (str == null || str.isEmpty())
+            return false;
         for (char c : str.toCharArray()) {
-            if (!Character.isDigit(c)) return false;
+            if (!Character.isDigit(c))
+                return false;
         }
         return true;
     }
 
-    /** @return true si hay alguien en esa posición (false también si la posición no es válida) */
+    /**
+     * @return true si hay alguien en esa posición (false también si la posición no
+     *         es válida)
+     */
     public boolean contiene(String posicion) {
         return buscarNodo(posicion) != null;
     }
@@ -171,7 +189,7 @@ public class ArbolGenealogico {
             long n = Long.parseLong(pos);
             long padrePos = n / 2;
             Nodo nodoPadre = buscarNodo(String.valueOf(padrePos));
-            
+
             if (nodoPadre == null) {
                 throw new ArbolInvalidoException("Falta la persona de la que depende (posición " + padrePos + ").");
             }
@@ -232,9 +250,9 @@ public class ArbolGenealogico {
         }
 
         long n = Long.parseLong(posicion);
-        
+
         // CORRECCIÓN: Convertir n a String usando String.valueOf(n)
-        String posPadre = Posicion.posicionDelPadre(String.valueOf(n)); 
+        String posPadre = Posicion.posicionDelPadre(String.valueOf(n));
 
         if (buscarNodo(posPadre) != null) {
             throw new ArbolInvalidoException("El padre en la posición " + posPadre + " ya existe.");
@@ -258,9 +276,9 @@ public class ArbolGenealogico {
         }
 
         long n = Long.parseLong(posicion);
-        
+
         // CORRECCIÓN: Convertir n a String usando String.valueOf(n)
-        String posMadre = Posicion.posicionDeLaMadre(String.valueOf(n)); 
+        String posMadre = Posicion.posicionDeLaMadre(String.valueOf(n));
 
         if (buscarNodo(posMadre) != null) {
             throw new ArbolInvalidoException("La madre en la posición " + posMadre + " ya existe.");
@@ -279,12 +297,21 @@ public class ArbolGenealogico {
             throw new ArbolInvalidoException("La posición " + posicion + " no existe.");
         }
 
-        // Validar que sea el sujeto ("1") o un descendiente (contiene puntos)
         if (!posicion.equals("1") && esNumeroEntero(posicion)) {
             throw new ArbolInvalidoException("Solo se pueden agregar hijos al sujeto y a sus descendientes.");
         }
 
-        int siguienteNumeroHijo = nodoProgenitor.hijos.size() + 1;
+        // Encontrar el mayor número de hijo existente para soportar huecos (ej: si
+        // existe 1.2, el siguiente es 1.3)
+        int maxOrden = 0;
+        for (Nodo hijo : nodoProgenitor.hijos) {
+            String posHijo = hijo.persona.getPosicion();
+            int ordenHijo = Posicion.orden(posHijo);
+            if (ordenHijo > maxOrden) {
+                maxOrden = ordenHijo;
+            }
+        }
+        int siguienteNumeroHijo = maxOrden + 1;
         String posHijo = posicion + "." + siguienteNumeroHijo;
 
         Persona hijo = new Persona(posHijo, nombre, nacimiento, fallecimiento);
@@ -332,7 +359,8 @@ public class ArbolGenealogico {
     }
 
     private int contarYLimpiarSubarbol(Nodo nodo) {
-        if (nodo == null) return 0;
+        if (nodo == null)
+            return 0;
         int cuenta = 1; // Cuenta al nodo actual
 
         // Contar ascendientes conectados si los tuviera
@@ -352,35 +380,31 @@ public class ArbolGenealogico {
     }
 
     /**
-     * @return todos los miembros en este orden: sujeto, ascendientes (Ahnentafel ascendente), descendientes (Preorden).
+     * @return todos los miembros en este orden: sujeto, ascendientes (Ahnentafel
+     *         ascendente), descendientes (Preorden).
      */
     public List<Persona> miembros() {
         List<Persona> lista = new ArrayList<>();
-        if (raiz == null) return lista;
+        if (raiz == null)
+            return lista;
 
         // 1. Sujeto
         lista.add(raiz.persona);
 
         // 2. Ascendientes por número Ahnentafel ascendente (2, 3, 4, 5...)
-        // Buscamos secuencialmente mientras existan
+
         long n = 2;
-        while (true) {
+        while (n <= 4095) { // Cubre hasta más de 10 generaciones
             Nodo asc = buscarNodo(String.valueOf(n));
-            if (asc == null) {
-                // Si en un nivel ya no hay, podemos comprobar si existen más adelante o parar
-                // Una forma segura es recorrer un rango prudente o verificar si hay nodos con este índice.
-                // Para mantener la eficiencia y precisión, evaluamos si el padre de n/2 existe.
-                if (!existeAscendienteHasta(n)) {
-                    break;
-                }
-            } else {
+            if (asc != null) {
                 lista.add(asc.persona);
             }
             n++;
-            if (n > 1000000) break; // Límite de seguridad razonable
+
         }
 
-        // 3. Descendientes en PREORDEN (cada persona y después sus hijos)
+
+        // 3. Descendientes en PREORDEN
         for (Nodo hijo : raiz.hijos) {
             recolectarPreorden(hijo, lista);
         }
@@ -388,39 +412,45 @@ public class ArbolGenealogico {
         return lista;
     }
 
-    private boolean existeAscendienteHasta(long limiteMaxBusqueda) {
-        // Optimización menor para saber si vale la pena seguir buscando índices vacíos
-        // Comprobamos si hay algún nodo ascendiente con índice mayor
-        return true; // Dejamos que el bucle continúe hasta encontrar un límite lógico o hasta un tope de seguridad.
-    }
+  
 
     private void recolectarPreorden(Nodo nodo, List<Persona> lista) {
-        if (nodo == null) return;
+        if (nodo == null)
+            return;
         lista.add(nodo.persona);
         for (Nodo hijo : nodo.hijos) {
             recolectarPreorden(hijo, lista);
         }
     }
 
-    /** @return solo los ascendientes, por número Ahnentafel ascendente (sin el sujeto) */
+    /**
+     * @return solo los ascendientes, por número Ahnentafel ascendente (sin el
+     *         sujeto)
+     */
     public List<Persona> ascendientes() {
         List<Persona> lista = new ArrayList<>();
         long n = 2;
-        // Determinamos un límite basándonos en si la posición es alcanzable o buscamos secuencialmente
-        // Recorremos hasta que no encontremos más nodos consecutivos o evaluamos por existencia
+        // Determinamos un límite basándonos en si la posición es alcanzable o buscamos
+        // secuencialmente
+        // Recorremos hasta que no encontremos más nodos consecutivos o evaluamos por
+        // existencia
         while (n < 100000) {
             Nodo asc = buscarNodo(String.valueOf(n));
             if (asc != null) {
                 lista.add(asc.persona);
             } else {
-                // Si hay un salto muy grande sin ascendientes, podemos parar si ya superamos la profundidad lógica del árbol
-                // Una verificación sencilla es ver si el nodo raíz o los primeros niveles tienen ramas
-                if (n > 100 && lista.isEmpty()) break;
+                // Si hay un salto muy grande sin ascendientes, podemos parar si ya superamos la
+                // profundidad lógica del árbol
+                // Una verificación sencilla es ver si el nodo raíz o los primeros niveles
+                // tienen ramas
+                if (n > 100 && lista.isEmpty())
+                    break;
             }
             n++;
-            // Para evitar ciclos infinitos largos si no hay elementos altos, podemos poner una condición de parada si llevamos muchos n vacíos seguidos
+            // Para evitar ciclos infinitos largos si no hay elementos altos, podemos poner
+            // una condición de parada si llevamos muchos n vacíos seguidos
         }
-        
+
         // Forma más limpia filtrando desde miembros()
         List<Persona> todos = miembros();
         List<Persona> soloAsc = new ArrayList<>();
