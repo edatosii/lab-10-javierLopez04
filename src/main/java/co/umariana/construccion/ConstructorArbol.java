@@ -2,6 +2,13 @@ package co.umariana.construccion;
 
 import co.umariana.modelo.ArbolGenealogico;
 import co.umariana.modelo.ArbolInvalidoException;
+import co.umariana.modelo.Persona;
+import co.umariana.modelo.Posicion;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Construye un árbol genealógico a partir de un texto: cada línea es una persona.
@@ -15,31 +22,8 @@ import co.umariana.modelo.ArbolInvalidoException;
  *     3;Maria Doe;1921;
  *     1.1;Timmy Doe;2021;
  *     1.2;Amy Doe;2026;
- *
- * INSTRUCCIONES PARA EL ESTUDIANTE (Etapa 3)
- * ------------------------------------------
- * Reemplace el "throw new UnsupportedOperationException" por su implementación. Esta clase usa lo que ya
- * hizo en las etapas anteriores (Posicion, Persona y ArbolGenealogico). NO modifique las pruebas (src/test).
- *
- * REGLAS
- *   1. Si el texto es null o no tiene ninguna línea con contenido: ArbolInvalidoException (mensaje: "El texto está vacío...").
- *   2. Las líneas pueden terminar en \n o en \r\n. Las líneas en blanco se ignoran, pero los números de línea
- *      que se informan cuentan TODAS las líneas del texto (la primera es la línea 1).
- *   3. Cada línea tiene 4 campos separados por ';' (el cuarto, el fallecimiento, puede estar vacío). Se acepta
- *      también la línea con solo 3 campos y sin el último ';'. Los campos se recortan (trim).
- *      Si hay menos de 3 o más de 4 campos: error.
- *   4. El nacimiento y el fallecimiento deben ser números enteros (el fallecimiento vacío es "no tiene").
- *   5. Cada persona debe ser válida (Persona.validar) y no puede haber dos líneas con la misma posición.
- *   6. Debe existir la persona "1" (el sujeto), pero puede estar en cualquier línea.
- *   7. Las líneas pueden venir en CUALQUIER orden. El constructor debe agregarlas al árbol en un orden en el
- *      que cada persona ya tenga a la que necesita (por ejemplo, primero los ascendientes por número Ahnentafel
- *      ascendente y los descendientes por generación). Las reglas del árbol (ver ArbolGenealogico) las valida el árbol.
- *   8. Todos los errores asociados a una línea se informan con ArbolInvalidoException y un mensaje que EMPIEZA con
- *      "Línea N: " (N es el número de línea de la persona con el problema), por ejemplo:
- *          "Línea 3: la posición 2 está repetida."
- *      Los errores que no son de una línea (texto vacío, falta el sujeto) no llevan ese prefijo.
- *   9. Solo se muestran los miembros que están en el texto: no se crean personas vacías para los que faltan.
  */
+
 public final class ConstructorArbol {
 
     private ConstructorArbol() {
@@ -51,7 +35,131 @@ public final class ConstructorArbol {
      * @throws ArbolInvalidoException si el texto no cumple las reglas
      */
     public static ArbolGenealogico construir(String texto) {
-        // TODO Etapa 3
-        throw new UnsupportedOperationException("TODO: construir");
+        if (texto == null) {
+            throw new ArbolInvalidoException("El texto está vacío...");
+        }
+
+        String[] lineas = texto.split("\\r?\\n");
+        List<Persona> listaPersonas = new ArrayList<>();
+        Set<String> posicionesVistas = new HashSet<>();
+        boolean tieneLineasConContenido = false;
+
+        for (int i = 0; i < lineas.length; i++) {
+            int numLinea = i + 1;
+            String linea = lineas[i];
+            if (linea.isBlank()) {
+                continue;
+            }
+            tieneLineasConContenido = true;
+
+            // Separar campos manteniendo los vacíos al final si los hubiera
+            String[] campos = linea.split(";", -1);
+            if (campos.length < 3 || campos.length > 4) {
+                throw new ArbolInvalidoException("Línea " + numLinea + ": número de campos inválido (deben ser 3 o 4).");
+            }
+
+            String posStr = campos[0].trim();
+            String nombre = campos[1].trim();
+            String nacStr = campos[2].trim();
+            String falStr = (campos.length == 4) ? campos[3].trim() : "";
+
+            // Validar año de nacimiento
+            int nacimiento;
+            try {
+                nacimiento = Integer.parseInt(nacStr);
+            } catch (NumberFormatException e) {
+                throw new ArbolInvalidoException("Línea " + numLinea + ": el año de nacimiento no es un número entero válido.");
+            }
+
+            // Validar año de fallecimiento (opcional)
+            Integer fallecimiento = null;
+            if (!falStr.isEmpty()) {
+                try {
+                    fallecimiento = Integer.parseInt(falStr);
+                } catch (NumberFormatException e) {
+                    throw new ArbolInvalidoException("Línea " + numLinea + ": el año de fallecimiento no es un número entero válido.");
+                }
+            }
+
+            Persona persona;
+            try {
+                persona = new Persona(posStr, nombre, nacimiento, fallecimiento);
+                persona.validar(); // Lanza IllegalArgumentException si falla
+            } catch (IllegalArgumentException e) {
+                throw new ArbolInvalidoException("Línea " + numLinea + ": " + e.getMessage());
+            }
+
+            // Verificar posiciones repetidas
+            if (posicionesVistas.contains(posStr)) {
+                throw new ArbolInvalidoException("Línea " + numLinea + ": la posición " + posStr + " está repetida.");
+            }
+            posicionesVistas.add(posStr);
+            listaPersonas.add(persona);
+        }
+
+        if (!tieneLineasConContenido || listaPersonas.isEmpty()) {
+            throw new ArbolInvalidoException("El texto está vacío...");
+        }
+
+        // El sujeto ("1") debe existir obligatoriamente
+        if (!posicionesVistas.contains("1")) {
+            throw new ArbolInvalidoException("El texto no contiene al sujeto (posición 1).");
+        }
+
+        // Ordenar las personas para garantizar que los progenitores se agreguen antes que sus dependientes
+        listaPersonas.sort((p1, p2) -> {
+            String pos1 = p1.getPosicion();
+            String pos2 = p2.getPosicion();
+
+            if (pos1.equals("1")) return -1;
+            if (pos2.equals("1")) return 1;
+
+            boolean asc1 = Posicion.esAscendiente(pos1);
+            boolean asc2 = Posicion.esAscendiente(pos2);
+
+            if (asc1 && !asc2) return -1;
+            if (!asc1 && asc2) return 1;
+
+            if (asc1 && asc2) {
+                return Long.compare(Long.parseLong(pos1), Long.parseLong(pos2));
+            }
+
+            // Descendientes (d'Aboville): ordenar por profundidad (cantidad de segmentos) y luego componente a componente
+            String[] parts1 = pos1.split("\\.");
+            String[] parts2 = pos2.split("\\.");
+
+            if (parts1.length != parts2.length) {
+                return Integer.compare(parts1.length, parts2.length);
+            }
+
+            for (int j = 0; j < parts1.length; j++) {
+                int v1 = Integer.parseInt(parts1[j]);
+                int v2 = Integer.parseInt(parts2[j]);
+                if (v1 != v2) {
+                    return Integer.compare(v1, v2);
+                }
+            }
+            return 0;
+        });
+
+        // Encontrar al sujeto y crear el árbol
+        Persona sujeto = null;
+        for (Persona p : listaPersonas) {
+            if (p.getPosicion().equals("1")) {
+                sujeto = p;
+                break;
+            }
+        }
+
+        ArbolGenealogico arbol = new ArbolGenealogico(sujeto);
+
+        // Agregar el resto de los miembros ordenadamente
+        for (Persona p : listaPersonas) {
+            if (!p.getPosicion().equals("1")) {
+                arbol.agregar(p);
+            }
+        }
+
+        return arbol;
     }
 }
